@@ -65,4 +65,7 @@ def includeme(config):
     config.add_route('studies.study_schemata',              '/{study}/schemata',                    factory=models.StudyFactory, traverse='/{study}')
     config.add_route('studies.study_schema',                '/{study}/schemata/{schema}',           factory=models.StudyFactory, traverse='/{study}')
 
+
+    config.add_route('studies.survey',                      '/survey/{survey}',                     factory=models.SurveyFactory, traverse='/{survey}')
+
     log.debug('Routes configured')
