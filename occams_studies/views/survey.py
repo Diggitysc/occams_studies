@@ -32,7 +32,7 @@ from pyramid.response import Response
 from pyramid.renderers import render
 from occams_forms.renderers import \
     make_form, render_form, entity_data, \
-    form2json, version2json
+    form2json, version2json, modes
 
 
 #class SurveyLoginForm(wtforms.Form):
@@ -66,19 +66,38 @@ def search_view(context, request):
                 .filter_by(id=survey_check.entity_id)
                 .one()
             )
+
             schema_id = schema.schema_id
-            output = schema_id
+
+            allowed_schemata = (
+                db_session.query(datastore.Schema)
+                .join(models.study_schema_table)
+                .join(models.Study)
+                .join(models.Cycle)
+                .filter(datastore.Schema.name == context.schema.name)
+                .filter(models.Cycle.id.in_([cycle.id for cycle in visit.cycles]))
+                )
+            allowed_versions = [s.publish_date for s in allowed_schemata]
+
+            Form = make_form(
+                db_session,
+                schema_id,
+                entity=survey_check.entity_id,
+                show_metadata=True,
+                transition=modes.ALL,
+                allowed_versions=allowed_versions
+            )
+
+            form = Form(request.POST, data=entity_data(survey_check.entity_id))
+            return {
+                'form': render_form(
+                    form,
+                    attr={
+                        'method': 'POST',
+                        'action': request.current_route_path(),
+                        'role': 'form'
+                    }
+                )
+            }
         else:
-            output = 'FAIL'
-        #return Response(str(output))
-        return render('occams_forms:templates/form.pt', {
-        'cancel_url': None,
-        'schema': schema_id,
-        'entity': survey_check.entity_id,
-        'show_footer': True,
-    })
-
-
-    return {
-        #'login': login_form
-    }
+            return 403
